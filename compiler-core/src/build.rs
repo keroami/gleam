@@ -17,6 +17,7 @@ pub use self::telemetry::{NullTelemetry, Telemetry};
 
 use crate::ast::{
     CustomType, DefinitionLocation, TypedExpr, TypedModuleStatement, TypedPattern, TypedStatement,
+    UntypedModule,
 };
 use crate::{
     ast::{ModuleStatement, SrcSpan, TypedModule},
@@ -261,7 +262,7 @@ impl Module {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Display, Clone, PartialEq)]
 pub enum Located<'a> {
     Pattern(&'a TypedPattern),
     Statement(&'a TypedStatement),

@@ -773,6 +773,7 @@ dependencies = [
  "thiserror",
  "toml",
  "tracing",
+ "url",
  "vec1",
  "xxhash-rust",
 ]

@@ -91,3 +91,5 @@ pretty_assertions = "1.0.0"
 insta = "1.8.0"
 # Random value generation
 rand = "0.8.5"
+# URL construction
+url = "2.3.1"

@@ -14,7 +14,7 @@ use crate::{
 use debug_ignore::DebugIgnore;
 use lsp::{
     notification::{DidChangeWatchedFiles, DidOpenTextDocument},
-    request::GotoDefinition,
+    request::{CodeActionRequest, GotoDefinition},
     HoverProviderCapability, Position, Range, TextEdit, Url,
 };
 use lsp_types::{
@@ -130,6 +130,13 @@ where
                 let params = cast_request::<Completion>(request);
                 self.completion(params)
             }
+
+            "textDocument/codeAction" => {
+                let params = cast_request::<CodeActionRequest>(request);
+                self.code_action(params)
+            }
+
+            "refactor/rewrite" => (serde_json::Value::default(), Feedback::default()),
 
             _ => panic!("Unsupported LSP request"),
         };
@@ -369,6 +376,11 @@ where
         self.respond_with_engine(path, |engine| engine.completion(params))
     }
 
+    fn code_action(&mut self, params: lsp::CodeActionParams) -> (Json, Feedback) {
+        let path = path(&params.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.code_action(params))
+    }
+
     /// A file opened in the editor may be unsaved, so store a copy of the
     /// new content in memory and compile.
     fn text_document_did_open(&mut self, params: lsp::DidOpenTextDocumentParams) -> Feedback {
@@ -466,7 +478,19 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
         document_highlight_provider: None,
         document_symbol_provider: None,
         workspace_symbol_provider: None,
-        code_action_provider: None,
+        code_action_provider: Some(lsp::CodeActionProviderCapability::Options(
+            lsp::CodeActionOptions {
+                code_action_kinds: Some(vec![
+                    lsp::CodeActionKind::REFACTOR,
+                    lsp::CodeActionKind::REFACTOR_REWRITE,
+                ]),
+                work_done_progress_options: lsp::WorkDoneProgressOptions {
+                    work_done_progress: None,
+                },
+                resolve_provider: None,
+            },
+        )),
+
         code_lens_provider: None,
         document_formatting_provider: Some(lsp::OneOf::Left(true)),
         document_range_formatting_provider: None,

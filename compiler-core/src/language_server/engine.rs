@@ -12,6 +12,7 @@ use crate::{
     Error, Result, Warning,
 };
 use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use super::{src_span_to_lsp_range, DownloadDependencies, MakeLocker};
@@ -180,6 +181,55 @@ where
                 Some(Located::Expression(_expression)) => None,
                 Some(Located::ModuleStatement(_statement)) => None,
             })
+        })
+    }
+
+    pub fn code_action(
+        &mut self,
+        params: lsp::CodeActionParams,
+    ) -> Response<Option<lsp::CodeActionResponse>> {
+        self.respond(|this| {
+            // TODO need one that accepts a range and finds appropriate level node
+            let start = params.range.start;
+            let end = params.range.end;
+            let found = this.node_at_position(&lsp::TextDocumentPositionParams {
+                text_document: params.text_document.clone(), // Clone as otherwise the URI cannot be used in the response
+                position: start,
+            });
+            let front: lsp::TextEdit = lsp::TextEdit {
+                range: lsp::Range {
+                    start: start,
+                    end: start,
+                },
+                new_text: "fn() {".to_string(),
+            };
+            let back: lsp::TextEdit = lsp::TextEdit {
+                range: lsp::Range {
+                    start: end,
+                    end: end,
+                },
+                new_text: "}()".to_string(),
+            };
+            let edits: lsp::WorkspaceEdit = lsp::WorkspaceEdit {
+                changes: Some(HashMap::from([(
+                    params.text_document.uri,
+                    vec![front, back],
+                )])),
+                document_changes: None,
+                change_annotations: None,
+            };
+            let action: lsp::CodeActionOrCommand =
+                lsp::CodeActionOrCommand::CodeAction(lsp::CodeAction {
+                    title: "Wrap in fn".to_string(),
+                    kind: Some(lsp::CodeActionKind::REFACTOR_REWRITE),
+                    diagnostics: None,
+                    edit: Some(edits),
+                    command: None,
+                    is_preferred: None,
+                    disabled: None,
+                    data: None,
+                });
+            Ok(Some(vec![action]))
         })
     }
 
